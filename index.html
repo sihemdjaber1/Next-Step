@@ -693,13 +693,24 @@ function runOptimization() {
       const model = buildKNNModel(X_train, y_train);
       const k = Math.max(3, Math.floor(X_train.length * 0.1));
 
-      // Build demand matrix
+      // Compute all client-site distances and find their range for normalization
+      const allDists = [];
+      for (let i=0;i<nC;i++)
+        for (let j=0;j<nS;j++)
+          allDists.push(euclidean(pot[i], sites[j], latP, lonP, latS, lonS));
+      const distMin = Math.min(...allDists);
+      const distMax = Math.max(...allDists);
+      const distRange = distMax - distMin || 1;
+
+      // Build demand matrix — normalize client-site distance to match training dist scale
       const demandMatrix = [];
       for (let i=0;i<nC;i++) {
         demandMatrix[i] = [];
         for (let j=0;j<nS;j++) {
-          const dist = euclidean(pot[i], sites[j], latP, lonP, latS, lonS);
-          const x_raw = [...featureCols.map(f => parseFloat(pot[i][f])||0), dist];
+          const rawDist = euclidean(pot[i], sites[j], latP, lonP, latS, lonS);
+          // Scale distance to training data range [fmins[last], fmins[last]+franges[last]]
+          const distScaled = fmins[nCols-1] + ((rawDist - distMin) / distRange) * franges[nCols-1];
+          const x_raw = [...featureCols.map(f => parseFloat(pot[i][f])||0), distScaled];
           const x_norm = x_raw.map((v,k2) => (v - fmins[k2]) / franges[k2]);
           const pred = knnPredict(model, x_norm, k);
           demandMatrix[i][j] = Math.max(0, pred);
