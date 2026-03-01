@@ -590,70 +590,22 @@ function euclidean(r1, r2, lc1, lnc1, lc2, lnc2) {
   return Math.sqrt(Math.pow(r1[lc1]-r2[lc2], 2) + Math.pow(r1[lnc1]-r2[lnc2], 2));
 }
 
-// Simple linear regression (multiple variables)
-function linearRegression(X, y) {
-  const n = X.length;
-  const p = X[0].length;
-  // Add bias column
-  const Xb = X.map(row => [1, ...row]);
-  const Xt = transpose(Xb);
-  const XtX = matMul(Xt, Xb);
-  const XtXinv = invertMatrix(XtX);
-  const Xty = matVec(Xt, y);
-  const beta = matVec(XtXinv, Xty);
-  return beta; // beta[0] = intercept, beta[1..] = coefficients
+// Stable k-NN demand estimator (avoids matrix inversion instability)
+// Finds k nearest historical clients and returns weighted average demand
+function buildKNNModel(X_train, y_train) {
+  return { X_train, y_train };
 }
 
-function predict(beta, x) {
-  let val = beta[0];
-  for (let i = 0; i < x.length; i++) val += beta[i+1] * x[i];
-  return val;
-}
-
-function transpose(m) {
-  return m[0].map((_, i) => m.map(r => r[i]));
-}
-
-function matMul(A, B) {
-  const r = A.length, c = B[0].length, k = B.length;
-  const C = Array.from({length:r}, () => new Array(c).fill(0));
-  for (let i=0;i<r;i++) for (let j=0;j<c;j++) for (let l=0;l<k;l++) C[i][j] += A[i][l] * B[l][j];
-  return C;
-}
-
-// Proper matMul
-function matMul2(A, B) {
-  const r = A.length, c = B[0].length, k = B.length;
-  const C = Array.from({length:r}, () => new Array(c).fill(0));
-  for (let i=0;i<r;i++) for (let j=0;j<c;j++) for (let l=0;l<k;l++) C[i][j]+=A[i][l]*B[l][j];
-  return C;
-}
-
-function matVec(A, v) {
-  return A.map(row => row.reduce((s, a, j) => s + a*v[j], 0));
-}
-
-function invertMatrix(m) {
-  const n = m.length;
-  const aug = m.map((row, i) => {
-    const e = new Array(n).fill(0); e[i] = 1;
-    return [...row, ...e];
+function knnPredict(model, x, k) {
+  k = Math.min(k, model.X_train.length);
+  const dists = model.X_train.map((row, i) => {
+    const d = Math.sqrt(row.reduce((s, v, j) => s + Math.pow(v - x[j], 2), 0));
+    return { d, i };
   });
-  for (let i=0;i<n;i++) {
-    let maxRow = i;
-    for (let k=i+1;k<n;k++) if (Math.abs(aug[k][i]) > Math.abs(aug[maxRow][i])) maxRow = k;
-    [aug[i], aug[maxRow]] = [aug[maxRow], aug[i]];
-    const pivot = aug[i][i];
-    if (Math.abs(pivot) < 1e-12) { aug[i][i] = 1e-10; }
-    for (let j=0;j<2*n;j++) aug[i][j] /= (aug[i][i] || 1e-10);
-    for (let k=0;k<n;k++) {
-      if (k !== i) {
-        const f = aug[k][i];
-        for (let j=0;j<2*n;j++) aug[k][j] -= f*aug[i][j];
-      }
-    }
-  }
-  return aug.map(row => row.slice(n));
+  dists.sort((a, b) => a.d - b.d);
+  const neighbors = dists.slice(0, k);
+  const totalW = neighbors.reduce((s, n) => s + 1/(n.d + 1e-6), 0);
+  return neighbors.reduce((s, n) => s + model.y_train[n.i] / (n.d + 1e-6), 0) / totalW;
 }
 
 // Greedy optimizer (fast, no external library needed)
@@ -729,7 +681,7 @@ function runOptimization() {
       const X_raw = hist.map(r => [...featureCols.map(f => parseFloat(r[f])||0), parseFloat(r[distCol])||0]);
       const y_train = hist.map(r => parseFloat(r[demandCol])||0);
 
-      // Normalize to [0,1] to prevent numerical explosion
+      // Normalize all features to [0,1]
       const nCols = X_raw[0].length;
       const fmins = new Array(nCols).fill(Infinity);
       const fmaxs = new Array(nCols).fill(-Infinity);
@@ -737,18 +689,19 @@ function runOptimization() {
       const franges = fmaxs.map((mx,j) => mx - fmins[j] || 1);
       const X_train = X_raw.map(row => row.map((v,j) => (v - fmins[j]) / franges[j]));
 
-      // Train linear regression on normalized data
-      const beta = linearRegression(X_train, y_train);
+      // Build kNN model (stable, no matrix inversion)
+      const model = buildKNNModel(X_train, y_train);
+      const k = Math.max(3, Math.floor(X_train.length * 0.1));
 
-      // Build demand matrix using same normalization
+      // Build demand matrix
       const demandMatrix = [];
       for (let i=0;i<nC;i++) {
         demandMatrix[i] = [];
         for (let j=0;j<nS;j++) {
           const dist = euclidean(pot[i], sites[j], latP, lonP, latS, lonS);
           const x_raw = [...featureCols.map(f => parseFloat(pot[i][f])||0), dist];
-          const x_norm = x_raw.map((v,k) => (v - fmins[k]) / franges[k]);
-          const pred = predict(beta, x_norm);
+          const x_norm = x_raw.map((v,k2) => (v - fmins[k2]) / franges[k2]);
+          const pred = knnPredict(model, x_norm, k);
           demandMatrix[i][j] = Math.max(0, pred);
         }
       }
