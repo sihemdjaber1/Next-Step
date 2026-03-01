@@ -615,7 +615,10 @@ function transpose(m) {
 }
 
 function matMul(A, B) {
-  return A.map(row => B[0].map((_, j) => row.reduce((s, _, k) => s + A[row.indexOf(row)][k] * B[k][j], 0)));
+  const r = A.length, c = B[0].length, k = B.length;
+  const C = Array.from({length:r}, () => new Array(c).fill(0));
+  for (let i=0;i<r;i++) for (let j=0;j<c;j++) for (let l=0;l<k;l++) C[i][j] += A[i][l] * B[l][j];
+  return C;
 }
 
 // Proper matMul
