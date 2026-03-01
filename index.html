@@ -726,20 +726,29 @@ function runOptimization() {
       const nS    = sites.length;
 
       // Build training data
-      const X_train = hist.map(r => [...featureCols.map(f => parseFloat(r[f])||0), parseFloat(r[distCol])||0]);
+      const X_raw = hist.map(r => [...featureCols.map(f => parseFloat(r[f])||0), parseFloat(r[distCol])||0]);
       const y_train = hist.map(r => parseFloat(r[demandCol])||0);
 
-      // Train linear regression
+      // Normalize to [0,1] to prevent numerical explosion
+      const nCols = X_raw[0].length;
+      const fmins = new Array(nCols).fill(Infinity);
+      const fmaxs = new Array(nCols).fill(-Infinity);
+      X_raw.forEach(row => row.forEach((v,j) => { fmins[j]=Math.min(fmins[j],v); fmaxs[j]=Math.max(fmaxs[j],v); }));
+      const franges = fmaxs.map((mx,j) => mx - fmins[j] || 1);
+      const X_train = X_raw.map(row => row.map((v,j) => (v - fmins[j]) / franges[j]));
+
+      // Train linear regression on normalized data
       const beta = linearRegression(X_train, y_train);
 
-      // Build demand matrix
+      // Build demand matrix using same normalization
       const demandMatrix = [];
       for (let i=0;i<nC;i++) {
         demandMatrix[i] = [];
         for (let j=0;j<nS;j++) {
           const dist = euclidean(pot[i], sites[j], latP, lonP, latS, lonS);
-          const x = [...featureCols.map(f => parseFloat(pot[i][f])||0), dist];
-          const pred = predict(beta, x);
+          const x_raw = [...featureCols.map(f => parseFloat(pot[i][f])||0), dist];
+          const x_norm = x_raw.map((v,k) => (v - fmins[k]) / franges[k]);
+          const pred = predict(beta, x_norm);
           demandMatrix[i][j] = Math.max(0, pred);
         }
       }
