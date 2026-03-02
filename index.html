@@ -288,7 +288,7 @@ tr:hover td { background:#FAFBFF; }
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-number blue" data-target="100">0</div><div class="stat-desc">Times cheaper than hiring a location consultant</div></div>
     <div class="stat-card"><div class="stat-number" data-target="5">0</div><div class="stat-desc">Minutes to get a fully optimized site selection plan</div></div>
-    <div class="stat-card"><div class="stat-number blue" data-target="50000">0</div><div class="stat-desc">Euros saved vs traditional consulting per engagement</div></div>
+    <div class="stat-card"><div class="stat-number blue" data-target="50000">0</div><div class="stat-desc">Euros saved vs a traditional consultant — per expansion decision</div></div>
   </div>
 </div>
 </section>
@@ -331,15 +331,50 @@ tr:hover td { background:#FAFBFF; }
     </div>
     <div class="compare-after">
       <div class="compare-label">With NextStep</div>
-      <div class="compare-price">€500/mo</div>
-      <div class="compare-desc">AI-powered, self-serve, instant results</div>
+      <div class="compare-price">€490<span style="font-size:1.4rem;font-family:Inter,sans-serif;font-weight:300">/run</span></div>
+      <div class="compare-desc">One analysis. Full PDF report. Pay only when you decide.</div>
       <div class="compare-items">
         <div class="compare-item"><span class="check">✓</span> Results in under 5 minutes</div>
-        <div class="compare-item"><span class="check">✓</span> Upload your own data</div>
+        <div class="compare-item"><span class="check">✓</span> Includes downloadable PDF report</div>
         <div class="compare-item"><span class="check">✓</span> Reproducible & explainable</div>
-        <div class="compare-item"><span class="check">✓</span> Test unlimited scenarios</div>
-        <div class="compare-item"><span class="check">✓</span> Unlimited runs included</div>
+        <div class="compare-item"><span class="check">✓</span> Test unlimited scenarios per run</div>
+        <div class="compare-item"><span class="check">✓</span> No subscription, no commitment</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING SECTION -->
+<div style="max-width:1200px;margin:0 auto;padding-bottom:8rem;" class="reveal">
+  <div style="text-align:center;margin-bottom:3.5rem">
+    <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--blue);margin-bottom:0.6rem">Pricing</div>
+    <div style="font-family:'Instrument Serif',serif;font-size:clamp(2rem,3vw,2.6rem);font-weight:400;color:var(--black);letter-spacing:-0.02em">Simple. Pay when you decide.</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:860px;margin:0 auto">
+    <div style="background:white;border:1.5px solid var(--light);border-radius:14px;padding:2.5rem 2rem">
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--grey);margin-bottom:1rem">Single Run</div>
+      <div style="font-family:'Instrument Serif',serif;font-size:3.2rem;color:var(--black);line-height:1;margin-bottom:0.4rem">€490</div>
+      <div style="font-size:0.82rem;color:var(--grey);font-weight:300;margin-bottom:1.5rem">per analysis</div>
+      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:2rem">
+        <div style="font-size:0.82rem;color:#444;display:flex;gap:0.5rem"><span style="color:#16A34A">✓</span> Full optimization run</div>
+        <div style="font-size:0.82rem;color:#444;display:flex;gap:0.5rem"><span style="color:#16A34A">✓</span> PDF report included</div>
+        <div style="font-size:0.82rem;color:#444;display:flex;gap:0.5rem"><span style="color:#16A34A">✓</span> Interactive map & table</div>
+        <div style="font-size:0.82rem;color:#444;display:flex;gap:0.5rem"><span style="color:#16A34A">✓</span> CSV export</div>
+      </div>
+      <button onclick="showTool()" class="btn-primary" style="width:100%;text-align:center">Run analysis →</button>
+    </div>
+    <div style="background:var(--black);border:1.5px solid var(--black);border-radius:14px;padding:2.5rem 2rem;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(37,99,235,0.3) 0%,transparent 70%);pointer-events:none"></div>
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#60A5FA;margin-bottom:1rem">Growth Pack</div>
+      <div style="font-family:'Instrument Serif',serif;font-size:3.2rem;color:white;line-height:1;margin-bottom:0.4rem">€1,200</div>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.45);font-weight:300;margin-bottom:1.5rem">3 runs · save €270</div>
+      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:2rem">
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.75);display:flex;gap:0.5rem"><span style="color:#60A5FA">✓</span> Everything in Single Run ×3</div>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.75);display:flex;gap:0.5rem"><span style="color:#60A5FA">✓</span> Runs valid for 12 months</div>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.75);display:flex;gap:0.5rem"><span style="color:#60A5FA">✓</span> Priority support</div>
+        <div style="font-size:0.82rem;color:rgba(255,255,255,0.75);display:flex;gap:0.5rem"><span style="color:#60A5FA">✓</span> Custom feature columns</div>
+      </div>
+      <button onclick="showTool()" style="width:100%;text-align:center;background:white;color:var(--black);border:none;font-family:Inter,sans-serif;font-size:0.9rem;font-weight:600;padding:0.85rem 2rem;border-radius:6px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#EFF6FF'" onmouseout="this.style.background='white'">Get started →</button>
     </div>
   </div>
 </div>
@@ -349,7 +384,7 @@ tr:hover td { background:#FAFBFF; }
 <div class="cta-section reveal">
   <div class="cta-box">
     <div class="cta-title">Ready to find your<br><em>next best location?</em></div>
-    <p class="cta-sub">No credit card. No consultant. Just upload your data and go.</p>
+    <p class="cta-sub">€490 per run. Full PDF report included. No subscription, no commitment.</p>
     <button class="btn-white" onclick="showTool()">Launch NextStep →</button>
   </div>
 </div>
