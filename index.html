@@ -490,6 +490,40 @@ tr:hover td { background:#FAFBFF; }
   <div id="run-error" class="error-banner" style="display:none"></div>
 </div>
 
+<!-- BACKTEST -->
+<div class="step-block" id="backtest-block" style="display:none">
+  <div style="background:#F8F9FF;border:1px solid #DBEAFE;border-radius:12px;padding:2rem 2.5rem">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
+      <div>
+        <div class="step-eyebrow" style="color:#1D4ED8">Model Validation</div>
+        <div class="step-heading" style="font-size:1.3rem">Backtest — how accurate is the model?</div>
+        <div class="step-desc" style="margin-bottom:0">The model trains on 80% of your historical data and predicts demand for the remaining 20%. This measures how well it generalises to unseen clients.</div>
+      </div>
+      <button onclick="runBacktest()" id="backtest-btn" style="background:#2563EB;color:white;border:none;font-family:Inter,sans-serif;font-size:0.82rem;font-weight:600;padding:0.6rem 1.2rem;border-radius:6px;cursor:pointer;white-space:nowrap;margin-left:1.5rem;flex-shrink:0">Run Backtest →</button>
+    </div>
+    <div id="backtest-results" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #DBEAFE">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem">
+        <div style="background:white;border:1px solid #DBEAFE;border-radius:8px;padding:1rem 1.2rem">
+          <div style="font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#6B7280;margin-bottom:0.3rem">Mean Absolute Error</div>
+          <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;color:#0F0F0F" id="bt-mae">—</div>
+          <div style="font-size:0.72rem;color:#6B7280;margin-top:0.2rem">avg units off per prediction</div>
+        </div>
+        <div style="background:white;border:1px solid #DBEAFE;border-radius:8px;padding:1rem 1.2rem">
+          <div style="font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#6B7280;margin-bottom:0.3rem">R² Score</div>
+          <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;color:#0F0F0F" id="bt-r2">—</div>
+          <div style="font-size:0.72rem;color:#6B7280;margin-top:0.2rem">variance explained (1.0 = perfect)</div>
+        </div>
+        <div style="background:white;border:1px solid #DBEAFE;border-radius:8px;padding:1rem 1.2rem">
+          <div style="font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#6B7280;margin-bottom:0.3rem">Test Set Size</div>
+          <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;color:#0F0F0F" id="bt-n">—</div>
+          <div style="font-size:0.72rem;color:#6B7280;margin-top:0.2rem">clients held out for validation</div>
+        </div>
+      </div>
+      <div id="bt-verdict" style="font-size:0.85rem;font-weight:500;padding:0.7rem 1rem;border-radius:6px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- RESULTS -->
 <div id="results-block">
   <div class="results-eyebrow">✓ Optimization Complete</div>
@@ -577,6 +611,7 @@ function loadDemo() {
     buildColumnSelectors();
     document.getElementById('step2-block').style.display = 'block';
     document.getElementById('step3-block').style.display = 'block';
+    document.getElementById('backtest-block').style.display = 'block';
 
     // Scroll to step 2
     setTimeout(() => {
@@ -610,6 +645,7 @@ function loadFile(key, input) {
       buildColumnSelectors();
       document.getElementById('step2-block').style.display = 'block';
       document.getElementById('step3-block').style.display = 'block';
+      document.getElementById('backtest-block').style.display = 'block';
     }
   };
 
@@ -714,6 +750,69 @@ function greedyOptimize(demandMatrix, nClients, nSites, maxStores) {
   }
 
   return { openedSites: bestSites, assignments: assign, totalDemand };
+}
+
+// ── BACKTEST ──────────────────────────────────────────────────────────────────
+function runBacktest() {
+  const demandCol   = document.getElementById('sel-demand').value;
+  const distCol     = document.getElementById('sel-distance').value;
+  const featureCols = [...document.querySelectorAll('#multi-features .multi-tag.selected')].map(t => t.textContent);
+  const hist        = DATA.hist;
+
+  if (!hist || featureCols.length === 0) return;
+
+  // Shuffle and split 80/20
+  const shuffled = [...hist].sort(() => Math.random() - 0.5);
+  const splitAt  = Math.floor(shuffled.length * 0.8);
+  const train    = shuffled.slice(0, splitAt);
+  const test     = shuffled.slice(splitAt);
+
+  // Build + normalize training features
+  const X_raw = train.map(r => [...featureCols.map(f => parseFloat(r[f])||0), parseFloat(r[distCol])||0]);
+  const y_tr  = train.map(r => parseFloat(r[demandCol])||0);
+  const nC2   = X_raw[0].length;
+  const fmins = new Array(nC2).fill(Infinity);
+  const fmaxs = new Array(nC2).fill(-Infinity);
+  X_raw.forEach(row => row.forEach((v,j) => { fmins[j]=Math.min(fmins[j],v); fmaxs[j]=Math.max(fmaxs[j],v); }));
+  const franges = fmaxs.map((mx,j) => mx - fmins[j] || 1);
+  const X_tr_norm = X_raw.map(row => row.map((v,j) => (v - fmins[j]) / franges[j]));
+  const model = buildKNNModel(X_tr_norm, y_tr);
+  const k = Math.max(3, Math.floor(X_tr_norm.length * 0.1));
+
+  // Predict on test set
+  const y_true = test.map(r => parseFloat(r[demandCol])||0);
+  const y_pred = test.map(r => {
+    const x_raw = [...featureCols.map(f => parseFloat(r[f])||0), parseFloat(r[distCol])||0];
+    const x_norm = x_raw.map((v,j) => (v - fmins[j]) / franges[j]);
+    return Math.max(0, knnPredict(model, x_norm, k));
+  });
+
+  // MAE
+  const mae = y_true.reduce((s, v, i) => s + Math.abs(v - y_pred[i]), 0) / y_true.length;
+
+  // R²
+  const yMean = y_true.reduce((s,v)=>s+v,0) / y_true.length;
+  const ssTot = y_true.reduce((s,v)=>s+Math.pow(v-yMean,2),0);
+  const ssRes = y_true.reduce((s,v,i)=>s+Math.pow(v-y_pred[i],2),0);
+  const r2 = 1 - ssRes/ssTot;
+
+  // Display
+  document.getElementById('bt-mae').textContent = mae.toFixed(1);
+  document.getElementById('bt-r2').textContent  = Math.max(0, r2).toFixed(2);
+  document.getElementById('bt-n').textContent   = test.length;
+
+  const verdict = document.getElementById('bt-verdict');
+  if (r2 >= 0.7) {
+    verdict.style.background = '#DCFCE7'; verdict.style.color = '#166534';
+    verdict.textContent = '✓ Strong model — R² above 0.70 means the model explains most of the variation in demand. Predictions are reliable.';
+  } else if (r2 >= 0.4) {
+    verdict.style.background = '#FEF9C3'; verdict.style.color = '#854D0E';
+    verdict.textContent = '⚠ Moderate model — R² between 0.40 and 0.70. Predictions are directionally correct but have meaningful uncertainty. Consider adding more feature columns.';
+  } else {
+    verdict.style.background = '#FEE2E2'; verdict.style.color = '#991B1B';
+    verdict.textContent = '✗ Weak model — R² below 0.40. The features selected may not explain demand well. Try adding more relevant columns or check your data quality.';
+  }
+  document.getElementById('backtest-results').style.display = 'block';
 }
 
 // ── MAIN OPTIMIZATION ──────────────────────────────────────────────────────────
@@ -937,6 +1036,7 @@ function loadDemoData() {
   buildColumnSelectors();
   document.getElementById('step2-block').style.display = 'block';
   document.getElementById('step3-block').style.display = 'block';
+  document.getElementById('backtest-block').style.display = 'block';
 
   // Auto-select best feature columns
   setTimeout(() => {
