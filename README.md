@@ -2,9 +2,7 @@
 
 > **Open the right stores. Every time.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-nextstep-black?style=flat-square)](https://sihemdjaber1.github.io/Next-Step/)
-![HTML](https://img.shields.io/badge/HTML-CSS-JS-orange?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Live-brightgreen?style=flat-square)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-nextstep.app-black?style=flat-square)](https://sihemdjaber1.github.io/Next-Step/)
 
 ---
 
